@@ -117,7 +117,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
                 stringRedisTemplate.opsForZSet().remove(key, userId.toString());
             }
         }
-        return null;
+        return Result.ok();
     }
 
     @Override
@@ -200,7 +200,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         r.setList(blogs);
         r.setOffset(os);
         r.setMinTime(minTime);
-        return null;
+        return Result.ok(r);
     }
 
     private void queryBlogUser(Blog blog) {

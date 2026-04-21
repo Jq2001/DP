@@ -7,7 +7,6 @@ import cn.hutool.json.JSONUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
-import org.yaml.snakeyaml.events.Event;
 
 import javax.annotation.Resource;
 import java.time.LocalDateTime;
@@ -22,7 +21,7 @@ import static com.hmdp.utils.RedisConstants.*;
 @Component
 public class CacheClient {
     @Resource
-    private static StringRedisTemplate stringRedisTemplate;
+    private StringRedisTemplate stringRedisTemplate;
     private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
     public <R,ID> R queryWithPassThrough(String keyPrefix, ID id, Class<R> type, Function<ID,R> dbFallback,Long time, TimeUnit unit) {
