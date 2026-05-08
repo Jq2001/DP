@@ -21,4 +21,6 @@ public interface IVoucherOrderService extends IService<VoucherOrder> {
     void createVoucherOrder(VoucherOrder voucherOrder);
 
     void cancelTimeoutOrder(Long orderId);
+
+    void rollbackRedisSeckillState(Long voucherId, Long userId);
 }

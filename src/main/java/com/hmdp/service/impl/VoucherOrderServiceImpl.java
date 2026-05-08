@@ -118,9 +118,12 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         }
     }
 
-    private void rollbackRedisSeckillState(Long voucherId, Long userId) {
-        stringRedisTemplate.opsForValue().increment(SECKILL_STOCK_KEY + voucherId);
-        stringRedisTemplate.opsForSet().remove("seckill:order:" + voucherId, userId.toString());
+    @Override
+    public void rollbackRedisSeckillState(Long voucherId, Long userId) {
+        Long removed = stringRedisTemplate.opsForSet().remove("seckill:order:" + voucherId, userId.toString());
+        if (removed != null && removed > 0) {
+            stringRedisTemplate.opsForValue().increment(SECKILL_STOCK_KEY + voucherId);
+        }
     }
 
     @Override
