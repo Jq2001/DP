@@ -13,8 +13,8 @@ import org.springframework.amqp.rabbit.retry.MessageRecoverer;
 import org.springframework.amqp.rabbit.retry.RepublishMessageRecoverer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.boot.autoconfigure.amqp.RabbitTemplateCustomizer;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -117,8 +117,9 @@ public class RabbitMqConfig {
     }
 
     @Bean
-    public RabbitTemplateCustomizer rabbitTemplateCustomizer(StringRedisTemplate stringRedisTemplate) {
-        return rabbitTemplate -> {
+    public InitializingBean rabbitTemplateInitializer(RabbitTemplate rabbitTemplate,
+                                                      StringRedisTemplate stringRedisTemplate) {
+        return () -> {
             rabbitTemplate.setMandatory(true);
             rabbitTemplate.setReturnCallback((message, replyCode, replyText, exchange, routingKey) -> {
                 rollbackReturnedSeckillMessage(message.getMessageProperties().getHeaders(), stringRedisTemplate);

@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
 
@@ -65,7 +66,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                 userId.toString()
         );
 
-        int result = luaResult == null ? 1 : luaResult.intValue();
+        int result = luaResult.intValue();
         if (result != 0) {
             return Result.fail(result == 1 ? "库存不足" : "不能重复下单");
         }
@@ -98,14 +99,18 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     correlationData
             );
             CorrelationData.Confirm confirm = correlationData.getFuture().get(3, TimeUnit.SECONDS);
-            if (confirm == null || !confirm.isAck()) {
+            if (!confirm.isAck()) {
                 rollbackRedisSeckillState(voucherId, userId);
                 log.error("Failed to confirm seckill order message, orderId: {}, reason: {}",
                         voucherOrder.getId(),
-                        confirm == null ? "confirm timeout" : confirm.getReason());
+                        confirm.getReason());
                 return false;
             }
             return true;
+        } catch (TimeoutException e) {
+            rollbackRedisSeckillState(voucherId, userId);
+            log.error("Timed out while waiting for seckill order message confirm", e);
+            return false;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             rollbackRedisSeckillState(voucherId, userId);
