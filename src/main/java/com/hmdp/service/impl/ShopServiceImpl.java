@@ -1,10 +1,6 @@
 package com.hmdp.service.impl;
 
-import cn.hutool.core.codec.PunyCode;
-import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hmdp.dto.Result;
 import com.hmdp.entity.Shop;
@@ -12,8 +8,7 @@ import com.hmdp.mapper.ShopMapper;
 import com.hmdp.service.IShopService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.utils.CacheClient;
-import com.hmdp.utils.RedisConstants;
-import com.hmdp.utils.RedisData;
+import com.hmdp.utils.ShopBloomFilter;
 import com.hmdp.utils.SystemConstants;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResult;
@@ -26,11 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.hmdp.utils.RedisConstants.*;
@@ -47,9 +38,19 @@ import static com.hmdp.utils.RedisConstants.*;
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IShopService {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
-    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
     @Resource
     private CacheClient cacheClient;
+    @Resource
+    private ShopBloomFilter shopBloomFilter;
+
+    @Override
+    public boolean save(Shop entity) {
+        boolean success = super.save(entity);
+        if (success && entity != null) {
+            shopBloomFilter.add(entity.getId());
+        }
+        return success;
+    }
 
     @Override
     public Result queryById(Long id) {
@@ -59,7 +60,10 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //互斥锁解决缓存击穿
 //        Shop shop = queryWithMutex(id);
         //逻辑过期时间解决缓存击穿
-        Shop shop = cacheClient.queryWithLogicalExpire(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+        if (!shopBloomFilter.mightContain(id)) {
+            return Result.fail("店铺不存在");
+        }
+        Shop shop = cacheClient.queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
         if (shop == null) {
             return Result.fail("店铺不存在");
         }
@@ -97,7 +101,8 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //1.更新数据库
         updateById(shop);
         //2.删除缓存
-        stringRedisTemplate.delete(CACHE_SHOP_KEY + id);
+        cacheClient.evict(CACHE_SHOP_KEY + id);
+        shopBloomFilter.add(id);
         return Result.ok();
     }
 

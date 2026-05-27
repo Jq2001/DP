@@ -1,8 +1,6 @@
 package com.hmdp.service.impl;
 
-import ch.qos.logback.classic.spi.STEUtil;
 import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.util.BooleanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.hmdp.dto.Result;
@@ -18,13 +16,11 @@ import com.hmdp.service.IFollowService;
 import com.hmdp.service.IUserService;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
-import jodd.util.StringUtil;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.security.Key;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
